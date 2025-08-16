@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Clone-X  AI Agent CLI",
+  title: "ChaiCode AI Agent CLI",
   description: "Clone any website locally and make it functional",
   generator: "v0.app",
 }

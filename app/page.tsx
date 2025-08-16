@@ -35,23 +35,43 @@ export default function Dashboard() {
     },
   ])
 
-  const handleCloneWebsite = () => {
-    if (!url.trim()) return
+  const handleCloneWebsite = async () => {
+    if (!url.trim()) return;
 
-    console.log("Cloning website:", url)
-
-    // Create new project entry
     const newProject: ClonedProject = {
       id: Date.now().toString(),
       name: new URL(url).hostname.replace("www.", ""),
-      url: url,
-      status: "pending",
+      url,
+      status: "in-progress",
       createdAt: "Just now",
-    }
+    };
 
-    setProjects((prev) => [newProject, ...prev])
-    setUrl("")
-  }
+    setProjects((prev) => [newProject, ...prev]);
+    setUrl("");
+
+    try {
+      const res = await fetch("/api/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === newProject.id
+            ? { ...p, status: data.success ? "completed" : "pending" }
+            : p
+        )
+      );
+    } catch (err) {
+      setProjects((prev) =>
+        prev.map((p) => (p.id === newProject.id ? { ...p, status: "pending" } : p))
+      );
+    }
+  };
+
 
   const getStatusIcon = (status: ClonedProject["status"]) => {
     switch (status) {
@@ -83,7 +103,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
               <Globe className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-semibold text-foreground">Clone-X  AI Agent CLI</h1>
+              <h1 className="text-xl font-semibold text-foreground">ChaiCode AI Agent CLI</h1>
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
@@ -99,7 +119,7 @@ export default function Dashboard() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-foreground mb-4">Clone-X  AI Agent CLI</h2>
+          <h2 className="text-4xl font-bold text-foreground mb-4">ChaiCode AI Agent CLI</h2>
           <p className="text-xl text-muted-foreground mb-8">Clone any website locally and make it functional</p>
 
           {/* Clone Input */}
