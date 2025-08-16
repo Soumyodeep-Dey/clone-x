@@ -65,12 +65,15 @@ export default function Dashboard() {
             : p
         )
       );
-    } catch (err) {
+    } catch {
       setProjects((prev) =>
-        prev.map((p) => (p.id === newProject.id ? { ...p, status: "pending" } : p))
+        prev.map((p) =>
+          p.id === newProject.id ? { ...p, status: "pending" } : p
+        )
       );
     }
   };
+
 
 
   const getStatusIcon = (status: ClonedProject["status"]) => {
