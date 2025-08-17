@@ -9,6 +9,16 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
 
-export default nextConfig
+  // ✅ Expose cloned files as static
+  async rewrites() {
+    return [
+      {
+        source: "/clones/:path*",
+        destination: "/api/static/:path*", // will serve files from clones
+      },
+    ];
+  },
+};
+
+export default nextConfig;

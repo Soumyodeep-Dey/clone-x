@@ -21,6 +21,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { deleteProject } from "@/lib/utils";
 
 interface ClonedProject {
   id: string;
@@ -94,6 +95,15 @@ export default function Dashboard() {
           p.id === newProject.id ? { ...p, status: "pending" } : p
         )
       );
+    }
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    const result = await deleteProject({ id });
+    if (result.success) {
+      setProjects((prev) => prev.filter((project) => project.id !== id));
+    } else {
+      alert(result.error || "Failed to delete project");
     }
   };
 
@@ -261,6 +271,14 @@ export default function Dashboard() {
                         >
                           <Download className="h-4 w-4 mr-1" />
                           Download
+                        </Button>
+
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteProject(project.id)}
+                        >
+                          Delete
                         </Button>
                       </div>
                     </div>
