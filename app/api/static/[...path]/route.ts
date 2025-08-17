@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-export async function GET(req: Request, { params }: { params: { path: string[] } }) {
+export async function GET(req: Request, context: { params: { path: string[] } }) {
+    const { params } = context;
     try {
         const filePath = path.join(process.cwd(), "clones", ...params.path);
 

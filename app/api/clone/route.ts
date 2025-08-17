@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import * as cheerio from "cheerio"; // npm install cheerio
+import * as cheerio from "cheerio";  
 
 export async function POST(req: Request) {
     try {
