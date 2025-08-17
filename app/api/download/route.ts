@@ -1,9 +1,6 @@
-// app/api/download/route.ts
 import { NextResponse } from "next/server";
-import archiver from "archiver";
 import fs from "fs";
 import path from "path";
-import { PassThrough } from "stream";
 
 export async function POST(req: Request) {
     const { site } = await req.json();
@@ -13,23 +10,23 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
     }
 
-    const archive = archiver("zip");
-    const passThrough = new PassThrough();
+    const files = fs.readdirSync(folderPath);
+    const zip = await import("jszip"); // use jszip instead of archiver for Next.js
+    const JSZip = zip.default;
+    const archive = new JSZip();
 
-    archive.directory(folderPath, false);
-    archive.finalize();
+    for (const file of files) {
+        const filePath = path.join(folderPath, file);
+        const content = fs.readFileSync(filePath);
+        archive.file(file, content);
+    }
 
-    archive.pipe(passThrough);
+    const blob = await archive.generateAsync({ type: "nodebuffer" });
 
-    const webStream = new ReadableStream({
-        start(controller) {
-            passThrough.on("data", (chunk) => controller.enqueue(chunk));
-            passThrough.on("end", () => controller.close());
-            passThrough.on("error", (err) => controller.error(err));
-        }
-    });
+    // Convert Buffer to Uint8Array for Response
+    const uint8Array = new Uint8Array(blob);
 
-    return new Response(webStream, {
+    return new Response(uint8Array, {
         headers: {
             "Content-Type": "application/zip",
             "Content-Disposition": `attachment; filename=${site}.zip`,

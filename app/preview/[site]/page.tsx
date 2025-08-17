@@ -1,21 +1,17 @@
-// app/preview/[site]/page.tsx
-import fs from "fs";
-import path from "path";
-import { notFound } from "next/navigation";
+"use client";
 
-export default function PreviewPage({ params }: { params: { site: string } }) {
-    const filePath = path.join(process.cwd(), "clones", params.site, "page.tsx");
+import { useParams } from "next/navigation";
 
-    if (!fs.existsSync(filePath)) {
-        notFound();
-    }
+export default function PreviewPage() {
+    const { site } = useParams();
 
-    // 🚨 limitation: you can’t directly render raw .tsx, 
-    // so we’ll improve later by serving static HTML.
     return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold">Preview not yet supported inline</h1>
-            <p>But file exists at: {filePath}</p>
+        <div className="w-full h-screen">
+            <iframe
+                src={`/api/preview/${site}`}
+                className="w-full h-full border-0"
+                title={`Preview of ${site}`}
+            />
         </div>
     );
 }
