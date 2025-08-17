@@ -99,11 +99,37 @@ export default function Dashboard() {
   };
 
   const handleDeleteProject = async (id: string) => {
+    // Find the project to get its name
+    const projectToDelete = projects.find((p) => p.id === id);
     const result = await deleteProject({ id });
-    if (result.success) {
-      setProjects((prev) => prev.filter((project) => project.id !== id));
+    let folderDeleted = false;
+    let folderError = "";
+    if (projectToDelete) {
+      try {
+        const res = await fetch("/api/delete-folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folderName: projectToDelete.name }),
+        });
+        const data = await res.json();
+        folderDeleted = data.success;
+        folderError = data.error || "";
+      } catch (err) {
+        folderError = "Failed to delete folder";
+      }
+    }
+    if (result.success && (folderDeleted || !projectToDelete)) {
+      setProjects((prev) => {
+        const updated = prev.filter((project) => project.id !== id);
+        localStorage.setItem("clonedProjects", JSON.stringify(updated));
+        return updated;
+      });
     } else {
-      alert(result.error || "Failed to delete project");
+      let errorMsg = result.error || "Failed to delete project";
+      if (!folderDeleted && folderError) {
+        errorMsg += `\n${folderError}`;
+      }
+      alert(errorMsg);
     }
   };
 
@@ -130,7 +156,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
       {/* Navigation */}
       <nav className="border-b border-border bg-card">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -143,16 +169,13 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </div>
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-foreground mb-4">
@@ -238,48 +261,67 @@ export default function Dashboard() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={project.status !== "completed"}
-                          onClick={() => window.open(`/preview/${project.name}`, "_blank")}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={project.status !== "completed"}
-                          onClick={async () => {
-                            const res = await fetch("/api/download", {
-                              method: "POST",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({ site: project.name }),
-                            });
-                            const blob = await res.blob();
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = `${project.name}.zip`;
-                            a.click();
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
-
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteProject(project.id)}
-                        >
-                          Delete
-                        </Button>
+                      <div className="flex items-center gap-6">
+                        <div className="group relative">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="transition-transform duration-150 group-hover:scale-105 group-hover:shadow-md flex items-center gap-1"
+                            disabled={project.status !== "completed"}
+                            onClick={() => window.open(`/preview/${project.name}`, "_blank")}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span>View</span>
+                          </Button>
+                          <span className="absolute left-1/2 -translate-x-1/2 -top-10 min-w-[110px] bg-card text-xs text-foreground px-3 py-2 rounded-lg shadow-lg border border-border opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 pointer-events-none transition-all duration-200 z-10 flex items-center justify-center">
+                            <span className="mr-2">Preview site</span>
+                            <span className="absolute left-1/2 top-full -translate-x-1/2 w-3 h-3 bg-card border-l border-b border-border rotate-45 -mt-1"></span>
+                          </span>
+                        </div>
+                        <div className="group relative">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="transition-transform duration-150 group-hover:scale-105 group-hover:shadow-md flex items-center gap-1"
+                            disabled={project.status !== "completed"}
+                            onClick={async () => {
+                              const res = await fetch("/api/download", {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({ site: project.name }),
+                              });
+                              const blob = await res.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = `${project.name}.zip`;
+                              a.click();
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                            <span>Download</span>
+                          </Button>
+                          <span className="absolute left-1/2 -translate-x-1/2 -top-10 min-w-[110px] bg-card text-xs text-foreground px-3 py-2 rounded-lg shadow-lg border border-border opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 pointer-events-none transition-all duration-200 z-10 flex items-center justify-center">
+                            <span className="mr-2">Download zip</span>
+                            <span className="absolute left-1/2 top-full -translate-x-1/2 w-3 h-3 bg-card border-l border-b border-border rotate-45 -mt-1"></span>
+                          </span>
+                        </div>
+                        <div className="group relative">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="transition-transform duration-150 group-hover:scale-105 group-hover:shadow-md flex items-center gap-1"
+                            onClick={() => handleDeleteProject(project.id)}
+                          >
+                            <span className="font-semibold">Delete</span>
+                          </Button>
+                          <span className="absolute left-1/2 -translate-x-1/2 -top-10 min-w-[140px] bg-destructive text-xs text-white px-3 py-2 rounded-lg shadow-lg border border-destructive opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 pointer-events-none transition-all duration-200 z-10 flex items-center justify-center whitespace-nowrap">
+                            <span className="mr-2">Delete project</span>
+                            <span className="absolute left-1/2 top-full -translate-x-1/2 w-3 h-3 bg-destructive border-l border-b border-white rotate-45 -mt-1"></span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -289,6 +331,12 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+      {/* Footer */}
+      <footer className="w-full border-t border-border bg-card py-4 mt-12">
+        <div className="max-w-4xl mx-auto px-4 text-center text-muted-foreground text-sm">
+          Made by <a href="https://soumyodeep-dey.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80 transition-colors">Soumyodeep Dey</a>
+        </div>
+      </footer>
     </div>
   );
 }

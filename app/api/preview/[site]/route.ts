@@ -1,23 +1,20 @@
-import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { NextResponse } from "next/server";
 
-export async function GET(
-    req: Request,
-    context: { params: { site: string } }
-) {
-    const { site } = await context.params;
-    const siteDir = path.join(process.cwd(), "clones", site, "index.html");
+export async function GET(request: Request, { params }: { params: { site: string } }) {
+    const siteDir = path.join(process.cwd(), "clones", params.site);
+    const indexPath = path.join(siteDir, "index.html");
 
-    if (!fs.existsSync(siteDir)) {
-        return NextResponse.json({ error: "Preview not found" }, { status: 404 });
+    let html = "";
+    if (fs.existsSync(indexPath)) {
+        html = fs.readFileSync(indexPath, "utf-8");
+
+        // ✅ Rewrite local ./assets/... → /api/static/{site}/assets/...
+        html = html.replace(/\.\/assets\//g, `/api/static/${params.site}/assets/`);
     }
 
-    const html = fs.readFileSync(siteDir, "utf-8");
-
-    return new Response(html, {
-        headers: {
-            "Content-Type": "text/html",
-        },
+    return new NextResponse(html, {
+        headers: { "Content-Type": "text/html" }
     });
 }
