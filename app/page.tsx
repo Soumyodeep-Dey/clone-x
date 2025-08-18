@@ -244,19 +244,35 @@ export default function Dashboard() {
                           disabled={project.status !== "completed"}
                           title="Download zip"
                           onClick={async () => {
-                            const res = await fetch("/api/download", {
-                              method: "POST",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({ site: project.name }),
-                            })
-                            const blob = await res.blob()
-                            const url = window.URL.createObjectURL(blob)
-                            const a = document.createElement("a")
-                            a.href = url
-                            a.download = `${project.name}.zip`
-                            a.click()
+                            try {
+                              const res = await fetch("/api/download", {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({ site: project.name }),
+                              })
+                              if (!res.ok) {
+                                // Try to parse error JSON; fallback to status text
+                                let message = res.statusText || "Download failed"
+                                try {
+                                  const data = await res.json()
+                                  if (data && data.error) message = data.error
+                                } catch {}
+                                window.alert(message)
+                                return
+                              }
+                              const blob = await res.blob()
+                              const url = window.URL.createObjectURL(blob)
+                              const a = document.createElement("a")
+                              a.href = url
+                              a.download = `${project.name}.zip`
+                              a.click()
+                              // Optional: revoke to free memory
+                              setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+                            } catch (err) {
+                              window.alert("Download failed. Please try again.")
+                            }
                           }}
                         >
                           <Download className="h-4 w-4" />

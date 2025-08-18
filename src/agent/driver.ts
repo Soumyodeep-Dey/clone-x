@@ -3,6 +3,7 @@ import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import * as tools from "./tools/index";
 import { logger } from "../../shared/log";
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 const TOOL_MAP: Record<string, Function> = {
     analyzeWebsite: tools.analyzeWebsite,
     cloneWebsite: tools.cloneWebsite,
@@ -80,11 +81,11 @@ export class CoTDriver {
                 stream: false
             });
 
-            const msgContent = response.choices[0].message.content as any;
+            const msgContent = response.choices[0].message.content as string;
             const contentTextRaw = typeof msgContent === 'string'
                 ? msgContent
                 : Array.isArray(msgContent)
-                    ? msgContent.map((p: any) => p?.text ?? '').join('')
+                    ? (msgContent as Array<{ text?: string }>).map((p) => p?.text ?? '').join('')
                     : '';
             // Strip markdown fences if model wrapped JSON in ```json ... ```
             const contentText = contentTextRaw
@@ -94,7 +95,13 @@ export class CoTDriver {
             if (!contentText) continue;
 
             try {
-                let parsedContent: any;
+                interface ParsedContent {
+                    step: "START" | "THINK" | "TOOL" | "OBSERVE" | "OUTPUT";
+                    content: string;
+                    tool_name?: string;
+                    input?: Record<string, unknown>;
+                }
+                let parsedContent: ParsedContent;
                 try {
                     parsedContent = JSON.parse(contentText);
                 } catch (_err) {
