@@ -11,6 +11,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ site: strin
     if (fs.existsSync(indexPath)) {
         html = fs.readFileSync(indexPath, "utf-8");
 
+        // Remove <base> tags to avoid resolution against original domain
+        html = html.replace(/<base[^>]*>/gi, "");
+
         // ✅ Rewrite local ./assets/... → /api/static/{site}/assets/...
         html = html.replace(/\.\/assets\//g, `/api/static/${site}/assets/`);
     }

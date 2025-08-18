@@ -43,7 +43,7 @@ export async function cloneWebsite({ url, outputDir }: { url: string; outputDir:
         const rewritten = rewritePaths(html, mapping, url);
         fs.writeFileSync(path.join(outputDir, "index.html"), rewritten);
         // Also adjust URLs inside saved CSS so icon/font/image references resolve locally
-        rewriteCssInOutput(outputDir, mapping);
+        rewriteCssInOutput(outputDir, mapping, url);
         return `Clone complete: ${mapping.size} resources saved.`;
     } catch (err) {
         // Fallback: write raw HTML so preview is never blank

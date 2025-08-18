@@ -65,7 +65,7 @@ export class CoTDriver {
         this.logger.log("🤖 AI Driver", `Starting with goal: ${userGoal}`);
         
         let iterationCount = 0;
-        const maxIterations = 50; // Safety limit raised for faster convergence
+        const maxIterations = 25; // Safety limit raised for faster convergence
         
         while (iterationCount < maxIterations) {
             iterationCount++;

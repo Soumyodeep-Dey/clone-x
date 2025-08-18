@@ -19,6 +19,9 @@ export async function saveResources(resources: Map<string, Buffer>, outputDir: s
 export function rewritePaths(html: string, mapping: Map<string, string>, baseUrl: string) {
     const $ = cheerio.load(html);
 
+    // Remove <base> tags to ensure relative paths resolve locally after download
+    $('base').remove();
+
     const mapUrl = (u: string | undefined) => {
         if (!u) return undefined;
         try {
@@ -66,7 +69,7 @@ export function rewritePaths(html: string, mapping: Map<string, string>, baseUrl
 
 // Rewrite URLs inside CSS files saved in outputDir/assets by replacing any occurrence
 // of original resource URLs with their mapped local paths.
-export function rewriteCssInOutput(outputDir: string, mapping: Map<string, string>) {
+export function rewriteCssInOutput(outputDir: string, mapping: Map<string, string>, baseUrl: string) {
     const assetsDir = path.join(outputDir, "assets");
     if (!fs.existsSync(assetsDir)) return;
     const walk = (dir: string) => {
@@ -76,11 +79,41 @@ export function rewriteCssInOutput(outputDir: string, mapping: Map<string, strin
             if (stat.isDirectory()) walk(full);
             else if (full.toLowerCase().endsWith(".css")) {
                 let css = fs.readFileSync(full, "utf-8");
+                // Direct replace for any absolute original URLs we know about
                 for (const [orig, local] of mapping.entries()) {
                     if (css.includes(orig)) {
                         css = css.split(orig).join(local);
                     }
                 }
+
+                // Rewrite url(...) references that are root-absolute or relative in CSS
+                const rewriteCssUrl = (raw: string) => {
+                    const trimmed = raw.trim().replace(/^['\"]|['\"]$/g, "");
+                    if (!trimmed || trimmed.startsWith("data:")) return raw; // ignore data URIs
+                    try {
+                        const absolute = new URL(trimmed, baseUrl).href;
+                        const mapped = mapping.get(absolute);
+                        if (mapped) {
+                            // Preserve original quoting
+                            const quote = raw.trim().startsWith('"') ? '"' : raw.trim().startsWith("'") ? "'" : '';
+                            return `${quote}${mapped}${quote}`;
+                        }
+                    } catch {}
+                    return raw;
+                };
+
+                css = css.replace(/url\(([^)]+)\)/g, (_m, p1) => `url(${rewriteCssUrl(p1)})`);
+                css = css.replace(/@import\s+(url\(([^)]+)\)|["\']([^"\']+)["\'])/g, (m) => {
+                    const matchUrl = m.match(/url\(([^)]+)\)/);
+                    if (matchUrl) return `@import url(${rewriteCssUrl(matchUrl[1])})`;
+                    const matchQuoted = m.match(/@import\s+(["\'])([^"\']+)\1/);
+                    if (matchQuoted) {
+                        const replaced = rewriteCssUrl(matchQuoted[2]);
+                        const q = matchQuoted[1];
+                        return `@import ${q}${replaced}${q}`;
+                    }
+                    return m;
+                });
                 fs.writeFileSync(full, css);
             }
         }
