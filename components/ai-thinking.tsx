@@ -134,10 +134,10 @@ export function AIThinking({ isOpen, onClose, url, onComplete }: AIThinkingProps
     };
 
     useEffect(() => {
-        if (isOpen && !isStreaming) {
+        if (isOpen && !isStreaming && url && url.trim()) {
             startStreaming();
         }
-    }, [isOpen]);
+    }, [isOpen, url]);
 
     useEffect(() => {
         const lastEvent = events[events.length - 1];

@@ -3,9 +3,18 @@ import { CoTDriver } from "../../../src/agent/driver";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
-    const { url } = await req.json();
-    const hostname = new URL(url).hostname.replace("www.", "");
+    const body = await req.json();
+    let url = typeof body?.url === 'string' ? body.url.trim() : '';
+    if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+    let hostname = '';
+    try {
+        hostname = new URL(url).hostname.replace("www.", "");
+    } catch {
+        return NextResponse.json({ success: false, error: 'Invalid or missing URL' }, { status: 400 });
+    }
     const outDir = path.join(process.cwd(), "clones", hostname);
     fs.mkdirSync(outDir, { recursive: true });
 
