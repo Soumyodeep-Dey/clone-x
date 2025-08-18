@@ -38,7 +38,7 @@ export function AIThinking({ isOpen, onClose, url, onComplete }: AIThinkingProps
     const [events, setEvents] = useState<ThinkingEvent[]>([]);
     const [isStreaming, setIsStreaming] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
     const onCompleteRef = useRef(onComplete);
     const iterationCount = events.filter(e => (e.step || '').includes('Iteration')).length;
     const thinkCount = events.filter(e => (e.step || '').includes('🧠 THINK')).length;
@@ -99,6 +99,12 @@ export function AIThinking({ isOpen, onClose, url, onComplete }: AIThinkingProps
                 signal: controller.signal
             });
 
+            if (!response.ok) {
+                const message = `Stream failed: ${response.status} ${response.statusText}`;
+                setEvents(prev => [...prev, { type: 'error', message, timestamp: new Date().toISOString() }]);
+                return;
+            }
+
             const reader = response.body?.getReader();
             if (!reader) throw new Error('No reader available');
 
@@ -148,8 +154,8 @@ export function AIThinking({ isOpen, onClose, url, onComplete }: AIThinkingProps
 
     useEffect(() => {
         if (isPaused) return;
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        if (listRef.current) {
+            listRef.current.scrollTop = listRef.current.scrollHeight;
         }
     }, [events, isPaused]);
 
@@ -204,8 +210,8 @@ export function AIThinking({ isOpen, onClose, url, onComplete }: AIThinkingProps
                         Cloning: <span className="font-mono">{url}</span>
                     </div>
                     
-                    <ScrollArea className="h-[400px] w-full" ref={scrollRef}>
-                        <div className="space-y-3">
+                    <ScrollArea className="h-[400px] w-full">
+                        <div className="space-y-3 h-[400px] overflow-auto" ref={listRef}>
                             {events.map((event, index) => (
                                 <div key={index} className="flex items-start space-x-3 p-3 rounded-lg border bg-card">
                                     <div className="flex-shrink-0 mt-1">
@@ -219,7 +225,7 @@ export function AIThinking({ isOpen, onClose, url, onComplete }: AIThinkingProps
                                                 </Badge>
                                             )}
                                             <span className="text-xs text-muted-foreground">
-                                                {event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : ''}
+                                                {(() => { try { const d = event.timestamp ? new Date(event.timestamp) : null; return d && isFinite(d.getTime()) ? d.toLocaleTimeString() : ''; } catch { return ''; } })()}
                                             </span>
                                         </div>
                                         <p className="text-sm leading-relaxed">
