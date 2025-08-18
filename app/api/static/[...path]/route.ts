@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-export async function GET(req: Request, context: { params: { path: string[] } }) {
-    const { params } = context;
+export async function GET(req: Request, context: { params: Promise<{ path: string[] }> }) {
+    const { path: pathSegments } = await context.params;
     try {
-        const filePath = path.join(process.cwd(), "clones", ...params.path);
+        const baseDir = path.resolve(process.cwd(), "clones");
+        const filePath = path.resolve(baseDir, ...pathSegments);
+        if (!filePath.startsWith(baseDir + path.sep)) {
+            return NextResponse.json({ error: "Invalid path" }, { status: 403 });
+        }
 
         if (!fs.existsSync(filePath)) {
             return NextResponse.json({ error: "File not found" }, { status: 404 });
@@ -22,6 +26,8 @@ export async function GET(req: Request, context: { params: { path: string[] } })
         if (ext === ".png") contentType = "image/png";
         if (ext === ".jpg" || ext === ".jpeg") contentType = "image/jpeg";
         if (ext === ".svg") contentType = "image/svg+xml";
+        if (ext === ".webp") contentType = "image/webp";
+        if (ext === ".gif") contentType = "image/gif";
         if (ext === ".woff2") contentType = "font/woff2";
         if (ext === ".woff") contentType = "font/woff";
         if (ext === ".ttf") contentType = "font/ttf";

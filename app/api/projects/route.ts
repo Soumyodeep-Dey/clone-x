@@ -45,7 +45,18 @@ export async function GET() {
         }
         const content = fs.readFileSync(projectsFile, "utf-8");
         const projects = content.trim() ? JSON.parse(content) : [];
-        return NextResponse.json(projects);
+        // De-duplicate by name, prefer completed over others
+        const byName = new Map<string, any>();
+        for (const p of projects) {
+            const existing = byName.get(p.name);
+            if (!existing) {
+                byName.set(p.name, p);
+            } else {
+                const rank = (s: string) => (s === "completed" ? 2 : s === "in-progress" ? 1 : 0);
+                if (rank(p.status) >= rank(existing.status)) byName.set(p.name, p);
+            }
+        }
+        return NextResponse.json(Array.from(byName.values()));
     } catch (err) {
         return NextResponse.json({ error: "Failed to load projects" }, { status: 500 });
     }
@@ -59,9 +70,15 @@ export async function POST(req: Request) {
             fs.writeFileSync(projectsFile, "[]");
         }
         const content = fs.readFileSync(projectsFile, "utf-8");
-        const projects = content.trim() ? JSON.parse(content) : [];
+        let projects = content.trim() ? JSON.parse(content) : [];
 
-        projects.unshift(body);
+        // Upsert by name
+        const idx = projects.findIndex((p: any) => p.name === body.name);
+        if (idx >= 0) {
+            projects[idx] = { ...projects[idx], ...body };
+        } else {
+            projects.unshift(body);
+        }
         fs.writeFileSync(projectsFile, JSON.stringify(projects, null, 2));
 
         return NextResponse.json({ success: true });
